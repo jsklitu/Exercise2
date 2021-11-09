@@ -3,6 +3,7 @@ Thigns to consider:
     -Lamport timestamps
         -A node receives n-1 "confirms" and knows it has been granted access
         https://en.wikipedia.org/wiki/Lamport%27s_distributed_mutual_exclusion_algorithm
+        https://www.cs.cmu.edu/~dga/15-440/F12/HW1-ans.pdf
     
     -Nodes counter
         - ++ whenever someone enters
