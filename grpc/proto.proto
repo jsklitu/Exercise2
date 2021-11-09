@@ -4,7 +4,16 @@ package proto;
 
 option go_package = "Exercise2/proto";
 
+message Request{
+    string request = 1;
+}
+
+message Answer{
+}
 
 service NEEDSName{
-  
+    rpc RequestAccess(Request) returns (Answer);
+    rpc ComeIn() returns ();
+    rpc Leaving() returns ();
 }
+

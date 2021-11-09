@@ -1,0 +1,16 @@
+Thigns to consider:
+
+    -Lamport timestamps
+        -A node receives n-1 "confirms" and knows it has been granted access
+        https://en.wikipedia.org/wiki/Lamport%27s_distributed_mutual_exclusion_algorithm
+    
+    -Nodes counter
+        - ++ whenever someone enters
+        - -- whenever someone leaves
+
+    Timeouts
+        -Room must be evaquated after X seconds
+        -After X seconds, if no node is the winner, the one with the highest number of confirms is the winner
+
+    Requests
+        -
