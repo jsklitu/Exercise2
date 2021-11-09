@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "Exercise2/proto";
+
+
+service NEEDSName{
+  
+}
