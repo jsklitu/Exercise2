@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "Exercise2/proto";
+option go_package = "grpc/proto";
 
 message Request{
     string request = 1;
