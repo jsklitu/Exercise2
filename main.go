@@ -14,26 +14,9 @@ import (
 	//"google.golang.org/grpc/profiling/proto"
 )
 
-//global variables
-/*var lamportTime int64 = 0
-var wait *sync.WaitGroup
-
-func init() {
-	wait = &sync.WaitGroup{}
-}*/
-
-/*
-func updateTime(incomingTime int64) {
-	if incomingTime > lamportTime {
-		lamportTime = incomingTime
-	}
-	lamportTime++
-}
-*/
-
 func main() {
-	advertisePort := os.Args[1]
-	bindPort := os.Args[2]
+	advertisePort := "5001"
+	bindPort := os.Args[1]
 	fmt.Println(advertisePort)
 	fmt.Println(bindPort)
 	cluster, err := setupCluster(
@@ -46,8 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("we made it through ")
-	time.Sleep(32 * time.Second)
+	time.Sleep(3200 * time.Second)
 	defer cluster.Leave()
 }
 
@@ -57,13 +39,12 @@ func setupCluster(advertiseAddr string, bindAdd string, advertisePort string, bi
 	conf.MemberlistConfig.AdvertiseAddr = "127.0.0.1"
 	conf.MemberlistConfig.Name = bindPort
 
-	// Ports
-	advertisePortInt, err := strconv.Atoi(advertisePort)
+	bindPortInt, err := strconv.Atoi(bindPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	bindPortInt, err := strconv.Atoi(bindPort)
+	advertisePortInt, err := strconv.Atoi(advertisePort)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,8 +58,11 @@ func setupCluster(advertiseAddr string, bindAdd string, advertisePort string, bi
 		log.Printf("Could not create a cluster :(")
 	}
 
-	nodes, error := cluster.Join([]string{"127.0.0.1:7373"}, true)
-	fmt.Println(nodes)
+	newBind := bindPortInt - 1
+	fmt.Println(bindPortInt, newBind)
+
+	_, error = cluster.Join([]string{"127.0.0.1:" + strconv.Itoa(newBind)}, false)
+
 	if error != nil {
 		log.Printf("Could not join existing cluster - so creating own :)")
 	} else {
