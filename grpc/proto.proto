@@ -4,16 +4,22 @@ package proto;
 
 option go_package = "grpc/proto";
 
-message Request{
+message Peer{
+    string id = 1;
+}
+
+message Message{
     string request = 1;
+    string id = 2;
+    int64 timestamp = 3;
 }
 
-message Answer{
+message Close{
 }
 
-service NEEDSName{
-    rpc RequestAccess(Request) returns (Answer);
-    rpc ComeIn() returns ();
-    rpc Leaving() returns ();
+service CriticalSectionService {
+    rpc Request(Message) returns (Close);
+    rpc Reply(Message) returns (Close);
+    rpc Release(Message) returns (Close);
 }
 
