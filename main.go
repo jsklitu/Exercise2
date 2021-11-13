@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"google.golang.org/grpc"
+	//"google.golang.org/grpc"
 	"log"
 	"os"
 )
@@ -22,9 +22,9 @@ func main() {
 	// Get the client port in the form ip:port
 	clientIpAndPort := os.Args[1]
 
-	clients := getOtherClientRoutes("ipsAndPorts.txt", clientIpAndPort)
-	for j := 0; j < len(clients); j++ {
-		fmt.Println(clients[j])
+	otherClients := getOtherClientRoutes("ipsAndPorts.txt", clientIpAndPort)
+	for j := 0; j < len(otherClients); j++ {
+		fmt.Println(otherClients[j])
 	}
 }
 
@@ -48,7 +48,6 @@ func getOtherClientRoutes(fileName string, clientIpAndPort string) []string {
 			routes = append(routes, ipAndPort)
 		}
 	}
-
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
