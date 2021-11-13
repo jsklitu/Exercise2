@@ -25,6 +25,7 @@ type Client struct {
 	id        string
 	timeStamp int
 	queue     []string
+	peers     []proto.CriticalSectionServiceClient
 }
 
 func main() {
