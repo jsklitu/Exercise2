@@ -1,13 +1,17 @@
 package main
 
 import (
+	proto "Exercise2/grpc"
 	"bufio"
+	"context"
 	"fmt"
+	"google.golang.org/grpc"
 	"log"
 	"os"
 )
 
 type Client struct {
+	proto.UnimplementedCriticalSectionServiceServer
 	id        int
 	ipAndPort string
 	timeStamp int
@@ -51,30 +55,14 @@ func getOtherClientRoutes(fileName string, clientIpAndPort string) []string {
 	return routes
 }
 
-/*func Request(ctx context.Context, in *proto.Message) (*proto.Close, error) {
-
+func (c *Client) Request(ctx context.Context, in *proto.Message) (*proto.Close, error) {
+	return &proto.Close{}, nil
 }
 
-func Reply(ctx context.Context, in *proto.Message) (*proto.Close, error) {
-
+func (c *Client) Reply(ctx context.Context, in *proto.Message) (*proto.Close, error) {
+	return &proto.Close{}, nil
 }
 
-func Release(ctx context.Context, in *proto.Message) (*proto.Close, error) {
-
+func (c *Client) Release(ctx context.Context, in *proto.Message) (*proto.Close, error) {
+	return &proto.Close{}, nil
 }
-
-
-
-func sendRequestMessage(peer *proto.Peer) {
-	lamportTime++
-	newMsg := &proto.Message{
-		Id:        peer.id,
-		Message:   "I wanna get in!!",
-		Timestamp: lamportTime,
-	}
-	_, requestErr := peer.BroadcastMessage(context.Background(), newMsg)
-
-	if requestErr != nil {
-		log.Println("error sending join message: ", requestErr)
-	}
-}*/
