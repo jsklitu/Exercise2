@@ -18,8 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CriticalSectionServiceClient interface {
-	Request(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
-	Reply(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
+	Request(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	Release(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
 }
 
@@ -31,18 +30,9 @@ func NewCriticalSectionServiceClient(cc grpc.ClientConnInterface) CriticalSectio
 	return &criticalSectionServiceClient{cc}
 }
 
-func (c *criticalSectionServiceClient) Request(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error) {
-	out := new(Close)
+func (c *criticalSectionServiceClient) Request(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
+	out := new(Message)
 	err := c.cc.Invoke(ctx, "/proto.CriticalSectionService/Request", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *criticalSectionServiceClient) Reply(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error) {
-	out := new(Close)
-	err := c.cc.Invoke(ctx, "/proto.CriticalSectionService/Reply", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +52,7 @@ func (c *criticalSectionServiceClient) Release(ctx context.Context, in *Message,
 // All implementations must embed UnimplementedCriticalSectionServiceServer
 // for forward compatibility
 type CriticalSectionServiceServer interface {
-	Request(context.Context, *Message) (*Close, error)
-	Reply(context.Context, *Message) (*Close, error)
+	Request(context.Context, *Message) (*Message, error)
 	Release(context.Context, *Message) (*Close, error)
 	mustEmbedUnimplementedCriticalSectionServiceServer()
 }
@@ -72,11 +61,8 @@ type CriticalSectionServiceServer interface {
 type UnimplementedCriticalSectionServiceServer struct {
 }
 
-func (UnimplementedCriticalSectionServiceServer) Request(context.Context, *Message) (*Close, error) {
+func (UnimplementedCriticalSectionServiceServer) Request(context.Context, *Message) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Request not implemented")
-}
-func (UnimplementedCriticalSectionServiceServer) Reply(context.Context, *Message) (*Close, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Reply not implemented")
 }
 func (UnimplementedCriticalSectionServiceServer) Release(context.Context, *Message) (*Close, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Release not implemented")
@@ -113,24 +99,6 @@ func _CriticalSectionService_Request_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CriticalSectionService_Reply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CriticalSectionServiceServer).Reply(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.CriticalSectionService/Reply",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CriticalSectionServiceServer).Reply(ctx, req.(*Message))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CriticalSectionService_Release_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Message)
 	if err := dec(in); err != nil {
@@ -159,10 +127,6 @@ var CriticalSectionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Request",
 			Handler:    _CriticalSectionService_Request_Handler,
-		},
-		{
-			MethodName: "Reply",
-			Handler:    _CriticalSectionService_Reply_Handler,
 		},
 		{
 			MethodName: "Release",

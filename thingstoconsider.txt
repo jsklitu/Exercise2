@@ -1,5 +1,26 @@
 Thigns to consider:
 
+    Tegn systemet ...
+
+    LT = Lamport timestamp
+
+    Request
+    - Sende en request med et (id, LT) + putte ens egen request på ens egen queue
+
+    Reply
+    - Modtage en request og putte den på sin egen queue.
+    - Sende en reply med et (id, LT)
+
+    Release
+    - Modtage en release besked og fjerne afsenderen (den der lige har forladt CS) fra fronten af ens egen queue.
+
+    Other
+    - En client skal kunne holde styr på hvor mange replies den har fået. Når den har fået fra N - 1 OG den står først i køen => Critical section
+
+
+
+
+
     -Lamport timestamps
         -A node receives n-1 "confirms" and knows it has been granted access
         https://en.wikipedia.org/wiki/Lamport%27s_distributed_mutual_exclusion_algorithm
