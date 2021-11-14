@@ -18,8 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CriticalSectionServiceClient interface {
-	Request(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
-	Release(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
+	Receive(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
 }
 
 type criticalSectionServiceClient struct {
@@ -30,18 +29,9 @@ func NewCriticalSectionServiceClient(cc grpc.ClientConnInterface) CriticalSectio
 	return &criticalSectionServiceClient{cc}
 }
 
-func (c *criticalSectionServiceClient) Request(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
-	out := new(Message)
-	err := c.cc.Invoke(ctx, "/proto.CriticalSectionService/Request", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *criticalSectionServiceClient) Release(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error) {
+func (c *criticalSectionServiceClient) Receive(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error) {
 	out := new(Close)
-	err := c.cc.Invoke(ctx, "/proto.CriticalSectionService/Release", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/proto.CriticalSectionService/receive", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +42,7 @@ func (c *criticalSectionServiceClient) Release(ctx context.Context, in *Message,
 // All implementations must embed UnimplementedCriticalSectionServiceServer
 // for forward compatibility
 type CriticalSectionServiceServer interface {
-	Request(context.Context, *Message) (*Message, error)
-	Release(context.Context, *Message) (*Close, error)
+	Receive(context.Context, *Message) (*Close, error)
 	mustEmbedUnimplementedCriticalSectionServiceServer()
 }
 
@@ -61,11 +50,8 @@ type CriticalSectionServiceServer interface {
 type UnimplementedCriticalSectionServiceServer struct {
 }
 
-func (UnimplementedCriticalSectionServiceServer) Request(context.Context, *Message) (*Message, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Request not implemented")
-}
-func (UnimplementedCriticalSectionServiceServer) Release(context.Context, *Message) (*Close, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Release not implemented")
+func (UnimplementedCriticalSectionServiceServer) Receive(context.Context, *Message) (*Close, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Receive not implemented")
 }
 func (UnimplementedCriticalSectionServiceServer) mustEmbedUnimplementedCriticalSectionServiceServer() {
 }
@@ -81,38 +67,20 @@ func RegisterCriticalSectionServiceServer(s grpc.ServiceRegistrar, srv CriticalS
 	s.RegisterService(&CriticalSectionService_ServiceDesc, srv)
 }
 
-func _CriticalSectionService_Request_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _CriticalSectionService_Receive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CriticalSectionServiceServer).Request(ctx, in)
+		return srv.(CriticalSectionServiceServer).Receive(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.CriticalSectionService/Request",
+		FullMethod: "/proto.CriticalSectionService/receive",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CriticalSectionServiceServer).Request(ctx, req.(*Message))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CriticalSectionService_Release_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CriticalSectionServiceServer).Release(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.CriticalSectionService/Release",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CriticalSectionServiceServer).Release(ctx, req.(*Message))
+		return srv.(CriticalSectionServiceServer).Receive(ctx, req.(*Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -125,12 +93,8 @@ var CriticalSectionService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*CriticalSectionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Request",
-			Handler:    _CriticalSectionService_Request_Handler,
-		},
-		{
-			MethodName: "Release",
-			Handler:    _CriticalSectionService_Release_Handler,
+			MethodName: "receive",
+			Handler:    _CriticalSectionService_Receive_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

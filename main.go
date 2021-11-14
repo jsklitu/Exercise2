@@ -2,7 +2,6 @@ package main
 
 import (
 	proto "Exercise2/grpc"
-	"bufio"
 	"fmt"
 	"google.golang.org/grpc"
 	"net"
@@ -13,36 +12,31 @@ import (
 	"os"
 )
 
-var wait *sync.WaitGroup
-
-// The wait group will be synced as the first step
-func init() {
-	wait = &sync.WaitGroup{}
-}
-
 type Client struct {
 	proto.UnimplementedCriticalSectionServiceServer
-	id        string
-	timeStamp int
-	queue     []string
-	peers     []proto.CriticalSectionServiceClient
+	mu         sync.Mutex
+	id         string
+	peer       proto.CriticalSectionServiceClient
+	peerId     string
+	wantAccess bool
 }
 
 func main() {
 	done := make(chan int)
 	waiter := &sync.WaitGroup{}
 
-	// Get the client port in the form ip:port
 	clientPort := os.Args[1]
+	peerPort := os.Args[2]
+	if len(clientPort) > 5 || len(peerPort) > 5 {
+		log.Fatalf("Invalid input")
+	}
+
 	client := &Client{
 		id:        clientPort,
 		timeStamp: 1,
 		queue:     []string{},
 		peers:     []proto.CriticalSectionServiceClient{},
 	}
-
-	otherClients := getOtherClientRoutes("ports.txt", clientPort)
-	fmt.Println(otherClients) // remove
 
 	clientServerGrpc := grpc.NewServer()           // Start server
 	listener, err := net.Listen("tcp", clientPort) // Listen at the client's port
@@ -55,7 +49,7 @@ func main() {
 	proto.RegisterCriticalSectionServiceServer(clientServerGrpc, client)
 
 	go serverRunning(clientServerGrpc, listener, waiter)
-	connectWithPeers(client, otherClients)
+	connectPeer(client, peerPort)
 
 	waitForReady()
 
@@ -66,7 +60,11 @@ func main() {
 		close(done)
 	}()
 
+	fmt.Println("66")
+
 	<-done // Wait until done sends back some data
+
+	fmt.Println("69")
 }
 
 func sendARequest(client *Client) {
@@ -91,60 +89,40 @@ func serverRunning(clientServerGrpc *grpc.Server, listener net.Listener, wait *s
 	}
 }
 
-func connectWithPeers(client *Client, otherClients []string) {
-	for _, otherClient := range otherClients {
-		conn, err := grpc.Dial("localhost"+otherClient, grpc.WithInsecure())
-		if err != nil {
-			log.Fatalf("Client could not connect to peer " + otherClient)
-		}
-		peer := proto.NewCriticalSectionServiceClient(conn)
-		client.peers = append(client.peers, peer)
-	}
-}
-
-func waitForReady() {
-	scanner := bufio.NewScanner(os.Stdin) // Scan the input from the user through the command line
-	for scanner.Scan() {
-		if scanner.Text() == "ready" {
-			return
-		}
-	}
-}
-
-func getOtherClientRoutes(fileName string, clientIpAndPort string) []string {
-	// Open file
-	f, err := os.Open(fileName)
+// Connect with the neighboring peer
+func connectPeer(client *Client, peerPort string) {
+	conn, err := grpc.Dial("localhost"+peerPort, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal("Could not read file ", err)
+		log.Fatalf("Client could not connect to peer " + peerPort)
 	}
-	// Close the file at the end of the program
-	defer f.Close()
-
-	// Read file line by line
-	scanner := bufio.NewScanner(f)
-
-	var routes []string
-	for scanner.Scan() {
-		ipAndPort := scanner.Text()
-		// Do not include the client's own port
-		if ipAndPort != clientIpAndPort {
-			routes = append(routes, ipAndPort)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return routes
+	newPeer := proto.NewCriticalSectionServiceClient(conn)
+	client.peer = newPeer
 }
 
-func (c *Client) Request(ctx context.Context, in *proto.Message) (*proto.Message, error) {
-	fmt.Println("I have received a request")
-	return &proto.Message{
-		Request: "Hej",
-		Id:      c.id,
-	}, nil
-}
+func (c *Client) Receive(ctx context.Context, in *proto.Message) (*proto.Close, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	defer log.Println("im done with recieve method")
+	log.Println("Received a message from ", in.Id, ". The critical section key is: ", in.CriticalSection)
+	if c.wantAccess {
+		log.Println("Im in the critical section")
+		in.CriticalSection++
+		time.Sleep(3 * time.Second)
+		c.wantAccess = false
+		log.Println("Increased the critical section key to: ", in.CriticalSection)
+		log.Println("I'm leaving the critical section")
+	} else {
+		fmt.Println("I don't want access right now – passing the key on")
+	}
 
-func (c *Client) Release(ctx context.Context, in *proto.Message) (*proto.Close, error) {
-	return &proto.Close{}, nil
+	fmt.Println("Below critical section section")
+
+	in.Id = c.id
+	_, err := c.peer.Receive(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	returnMsg := &proto.Close{}
+
+	return returnMsg, nil
 }
