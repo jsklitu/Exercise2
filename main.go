@@ -131,10 +131,7 @@ func (c *Client) Receive(ctx context.Context, in *proto.Message) (*proto.Close, 
 	fmt.Println("Below critical section section")
 
 	in.Id = c.id
-	_, err := c.peer.Receive(ctx, in)
-	if err != nil {
-		return nil, err
-	}
+	defer c.peer.Receive(ctx, in)
 	returnMsg := &proto.Close{}
 
 	return returnMsg, nil
