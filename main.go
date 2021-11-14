@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"sync"
+	"time"
 
 	"context"
 	"log"
@@ -32,10 +33,9 @@ func main() {
 	}
 
 	client := &Client{
-		id:        clientPort,
-		timeStamp: 1,
-		queue:     []string{},
-		peers:     []proto.CriticalSectionServiceClient{},
+		id:         clientPort,
+		wantAccess: false,
+		peerId:     peerPort,
 	}
 
 	clientServerGrpc := grpc.NewServer()           // Start server
@@ -51,9 +51,12 @@ func main() {
 	go serverRunning(clientServerGrpc, listener, waiter)
 	connectPeer(client, peerPort)
 
-	waitForReady()
+	if client.id == ":7373" {
+		go startCircle(client)
+	}
 
-	sendARequest(client)
+	go requestAccess(client)
+	fmt.Println("59")
 
 	go func() { // Wait for our wait group decrementing
 		waiter.Wait()
@@ -67,17 +70,27 @@ func main() {
 	fmt.Println("69")
 }
 
-func sendARequest(client *Client) {
-	for _, peer := range client.peers {
-		newMessage := &proto.Message{
-			Request: "send a request",
-			Id:      client.id,
+func startCircle(client *Client) {
+	log.Println("starting circle")
+	newMessage := &proto.Message{
+		Id:              client.id,
+		CriticalSection: 1,
+	}
+	_, err := client.peer.Receive(context.Background(), newMessage)
+	if err != nil {
+		log.Println("Could not start circle")
+	}
+}
+
+func requestAccess(client *Client) {
+	for {
+		if client.wantAccess != true {
+			time.Sleep(10 * time.Second)
+			client.mu.Lock()
+			client.wantAccess = true
+			log.Println("i have changed to true")
+			client.mu.Unlock()
 		}
-		returnRequest, err := peer.Request(context.Background(), newMessage)
-		if err != nil {
-			return
-		}
-		fmt.Println(returnRequest.Request, " from ", returnRequest.Id)
 	}
 }
 

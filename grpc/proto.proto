@@ -9,16 +9,14 @@ message Peer {
 }
 
 message Message {
-    string request = 1;
-    string id = 2;
-    int64 timestamp = 3;
+    string id = 1;
+    int64 criticalSection = 2;
 }
 
 message Close {
 }
 
 service CriticalSectionService {
-    rpc Request(Message) returns (Message);
-    rpc Release(Message) returns (Close);
+    rpc receive(Message) returns(Close);
 }
 
