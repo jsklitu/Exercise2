@@ -17,7 +17,6 @@ message Close {
 }
 
 service CriticalSectionService {
-    rpc receive(Message) returns(Close);
-
+    rpc receive(stream Message) returns(Close);
 }
 

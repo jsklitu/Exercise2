@@ -2,7 +2,6 @@ package main
 
 import (
 	proto "Exercise2/grpc"
-	"fmt"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
@@ -13,8 +12,14 @@ import (
 	"os"
 )
 
+type Connection struct {
+	stream proto.CriticalSectionService_ReceiveClient
+	error  chan error
+}
+
 type Client struct {
 	proto.UnimplementedCriticalSectionServiceServer
+	stream     proto.CriticalSectionService_ReceiveServer
 	mu         sync.Mutex
 	id         string
 	peer       proto.CriticalSectionServiceClient
@@ -56,14 +61,11 @@ func main() {
 	}
 
 	go requestAccess(client)
-	fmt.Println("59")
 
 	go func() { // Wait for our wait group decrementing
 		waiter.Wait()
 		close(done)
 	}()
-
-	fmt.Println("66")
 
 	<-done // Wait until done sends back some data
 
@@ -72,11 +74,7 @@ func main() {
 
 func startCircle(client *Client) {
 	log.Println("starting circle")
-	newMessage := &proto.Message{
-		Id:              client.id,
-		CriticalSection: 1,
-	}
-	_, err := client.peer.Receive(context.Background(), newMessage)
+	stream, err := client.peer.Receive(context.Background())
 	if err != nil {
 		log.Println("Could not start circle")
 	}
@@ -112,27 +110,17 @@ func connectPeer(client *Client, peerPort string) {
 	client.peer = newPeer
 }
 
-func (c *Client) Receive(ctx context.Context, in *proto.Message) (*proto.Close, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	defer log.Println("im done with recieve method")
-	log.Println("Received a message from ", in.Id, ". The critical section key is: ", in.CriticalSection)
-	if c.wantAccess {
-		log.Println("Im in the critical section")
-		in.CriticalSection++
-		time.Sleep(3 * time.Second)
-		c.wantAccess = false
-		log.Println("Increased the critical section key to: ", in.CriticalSection)
-		log.Println("I'm leaving the critical section")
-	} else {
-		fmt.Println("I don't want access right now – passing the key on")
+func (c *Client) Receive(str proto.CriticalSectionService_ReceiveServer) error {
+	if c.peerStream.stream == nil {
+		stream, err := c.peer.Receive(context.Background())
+		if err != nil {
+			return err
+		}
+		c.peerStream.stream = stream
+		c.peerStream.error = make(chan error)
 	}
+	c.stream = str
+	go waitForMessage(c)
 
-	fmt.Println("Below critical section section")
-
-	in.Id = c.id
-	defer c.peer.Receive(ctx, in)
-	returnMsg := &proto.Close{}
-
-	return returnMsg, nil
+	return <-c.peerStream.error
 }

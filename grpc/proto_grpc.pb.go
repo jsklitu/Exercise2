@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CriticalSectionServiceClient interface {
-	Receive(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
+	Receive(ctx context.Context, opts ...grpc.CallOption) (CriticalSectionService_ReceiveClient, error)
 }
 
 type criticalSectionServiceClient struct {
@@ -29,20 +29,45 @@ func NewCriticalSectionServiceClient(cc grpc.ClientConnInterface) CriticalSectio
 	return &criticalSectionServiceClient{cc}
 }
 
-func (c *criticalSectionServiceClient) Receive(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error) {
-	out := new(Close)
-	err := c.cc.Invoke(ctx, "/proto.CriticalSectionService/receive", in, out, opts...)
+func (c *criticalSectionServiceClient) Receive(ctx context.Context, opts ...grpc.CallOption) (CriticalSectionService_ReceiveClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CriticalSectionService_ServiceDesc.Streams[0], "/proto.CriticalSectionService/receive", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &criticalSectionServiceReceiveClient{stream}
+	return x, nil
+}
+
+type CriticalSectionService_ReceiveClient interface {
+	Send(*Message) error
+	CloseAndRecv() (*Close, error)
+	grpc.ClientStream
+}
+
+type criticalSectionServiceReceiveClient struct {
+	grpc.ClientStream
+}
+
+func (x *criticalSectionServiceReceiveClient) Send(m *Message) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *criticalSectionServiceReceiveClient) CloseAndRecv() (*Close, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Close)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // CriticalSectionServiceServer is the server API for CriticalSectionService service.
 // All implementations must embed UnimplementedCriticalSectionServiceServer
 // for forward compatibility
 type CriticalSectionServiceServer interface {
-	Receive(context.Context, *Message) (*Close, error)
+	Receive(CriticalSectionService_ReceiveServer) error
 	mustEmbedUnimplementedCriticalSectionServiceServer()
 }
 
@@ -50,8 +75,8 @@ type CriticalSectionServiceServer interface {
 type UnimplementedCriticalSectionServiceServer struct {
 }
 
-func (UnimplementedCriticalSectionServiceServer) Receive(context.Context, *Message) (*Close, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Receive not implemented")
+func (UnimplementedCriticalSectionServiceServer) Receive(CriticalSectionService_ReceiveServer) error {
+	return status.Errorf(codes.Unimplemented, "method Receive not implemented")
 }
 func (UnimplementedCriticalSectionServiceServer) mustEmbedUnimplementedCriticalSectionServiceServer() {
 }
@@ -67,22 +92,30 @@ func RegisterCriticalSectionServiceServer(s grpc.ServiceRegistrar, srv CriticalS
 	s.RegisterService(&CriticalSectionService_ServiceDesc, srv)
 }
 
-func _CriticalSectionService_Receive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
-	if err := dec(in); err != nil {
+func _CriticalSectionService_Receive_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(CriticalSectionServiceServer).Receive(&criticalSectionServiceReceiveServer{stream})
+}
+
+type CriticalSectionService_ReceiveServer interface {
+	SendAndClose(*Close) error
+	Recv() (*Message, error)
+	grpc.ServerStream
+}
+
+type criticalSectionServiceReceiveServer struct {
+	grpc.ServerStream
+}
+
+func (x *criticalSectionServiceReceiveServer) SendAndClose(m *Close) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *criticalSectionServiceReceiveServer) Recv() (*Message, error) {
+	m := new(Message)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(CriticalSectionServiceServer).Receive(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.CriticalSectionService/receive",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CriticalSectionServiceServer).Receive(ctx, req.(*Message))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // CriticalSectionService_ServiceDesc is the grpc.ServiceDesc for CriticalSectionService service.
@@ -91,12 +124,13 @@ func _CriticalSectionService_Receive_Handler(srv interface{}, ctx context.Contex
 var CriticalSectionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.CriticalSectionService",
 	HandlerType: (*CriticalSectionServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "receive",
-			Handler:    _CriticalSectionService_Receive_Handler,
+			StreamName:    "receive",
+			Handler:       _CriticalSectionService_Receive_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "grpc/proto.proto",
 }
