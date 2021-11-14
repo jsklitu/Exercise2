@@ -25,6 +25,7 @@ type Client struct {
 	peer       proto.CriticalSectionServiceClient
 	peerId     string
 	wantAccess bool
+	peerStream Connection
 }
 
 func main() {
@@ -69,7 +70,6 @@ func main() {
 
 	<-done // Wait until done sends back some data
 
-	fmt.Println("69")
 }
 
 func startCircle(client *Client) {
@@ -78,6 +78,18 @@ func startCircle(client *Client) {
 	if err != nil {
 		log.Println("Could not start circle")
 	}
+	client.peerStream = Connection{
+		stream: stream,
+		error:  make(chan error),
+	}
+	err1 := client.peerStream.stream.Send(&proto.Message{
+		Id:              client.id,
+		CriticalSection: 1,
+	})
+	if err1 != nil {
+		log.Println("Could not send initial message")
+	}
+
 }
 
 func requestAccess(client *Client) {
@@ -86,7 +98,6 @@ func requestAccess(client *Client) {
 			time.Sleep(10 * time.Second)
 			client.mu.Lock()
 			client.wantAccess = true
-			log.Println("i have changed to true")
 			client.mu.Unlock()
 		}
 	}
@@ -123,4 +134,37 @@ func (c *Client) Receive(str proto.CriticalSectionService_ReceiveServer) error {
 	go waitForMessage(c)
 
 	return <-c.peerStream.error
+}
+
+func waitForMessage(c *Client) {
+	for {
+		in, err := c.stream.Recv()
+		if err != nil {
+			return
+		}
+		c.mu.Lock()
+		log.Println("Received a message from ", in.Id, ". The critical section key is: ", in.CriticalSection)
+
+		if c.wantAccess {
+			log.Println("Im in the critical section")
+			in.CriticalSection++
+			time.Sleep(3 * time.Second)
+			c.wantAccess = false
+			log.Println("Increased the critical section key to: ", in.CriticalSection)
+			log.Println("I'm leaving the critical section")
+
+		} else {
+			log.Println("I don't want access right now – passing the key on")
+			time.Sleep(2 * time.Second)
+		}
+
+		c.mu.Unlock()
+		err1 := c.peerStream.stream.Send(&proto.Message{
+			Id:              c.id,
+			CriticalSection: in.CriticalSection,
+		})
+		if err1 != nil {
+			log.Println("Something wrong when sending message", err1)
+		}
+	}
 }
