@@ -146,7 +146,7 @@ func waitForMessage(c *Client) {
 		log.Println("Received a message from ", in.Id, ". The critical section key is: ", in.CriticalSection)
 
 		if c.wantAccess {
-			log.Println("Im in the critical section")
+			log.Println("I'm in the critical section")
 			in.CriticalSection++
 			time.Sleep(3 * time.Second)
 			c.wantAccess = false
